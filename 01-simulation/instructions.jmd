@@ -1,0 +1,85 @@
+---
+title : Wastewater treatment simulations example
+author : BEE 4750/5750
+date : Fall 2022
+weave_options:
+template: ../bee4750html.tpl
+doctype: md2html
+---
+
+```julia
+# activate and instantiate the environment
+import Pkg
+Pkg.activate(".")
+Pkg.instantiate()
+
+using Plots # plotting library
+using Random # tools for random number generation
+using Distributions # probability distribution library
+using StatsPlots # additional statistical plotting functionality
+```
+
+CRUD is released and carried downriver according to this diagram:
+
+![CRUD Simulation Diagram](figures/river_diagram.png)
+
+The statuatory regulation is that CRUD concentrations cannot exceed $1$ mg/L. Environmental authorities have recently found that the concentrations in the river are in excess of this value. We would like to devise a treatment plan to bring the system back into compliance.
+
+Recall that the first-order decay rate of CRUD in the river is $k=0.45 \ \text{d^{-1}}$. For treatment efficiencies $E_i$ at each waste source $i$, the mass of CRUD at every distance $x$ downriver from the initial inflow ($x=0$) is:
+
+$$
+M(x) = \begin{cases} (1100 - 1000 E_1) \exp(-0.45x/25) \ \text{kg/d} & x < 10 \\ 
+                     \left[(1100 - 1000 E_1) \exp(-0.18) +  1200 (1 - E_2)\right]\exp(-0.45(x-10)/25) \ \text{kg/d} & x > 10
+        \end{cases}
+$$
+
+The cost of treating CRUD is quadratic in $E_1$ and $E_2$, namely:
+
+$$
+C(E_1, E_2) = 5000E_1^2 + 3000E_2^2.
+$$
+
+# Plot untreated CRUD concentrations
+
+Plot the CRUD concentrations from $x = 0 \text{ to } 15$.  I recommend writing a function to calculate these concentrations, as you may want to reuse this later for different values of $E_1$ and $E_2$ (and rerunning functions is typically preferable to copying and pasting sections of code with slightly different values).
+
+If you want to compute exponentials, use the [`exp` function](https://docs.julialang.org/en/v1/base/math/#Base.exp-Tuple{Float64}).
+
+```julia
+# place relevant code here. feel free to split this into multiple code chunks if you'd like
+```
+
+In the absence of any treatment, what is the maximum concentration? How far downstream does it occur? Does this make sense physically?
+
+You can use the [`maximum` function](https://docs.julialang.org/en/v1/base/collections/#Base.maximum) to find the maximum over a data structure, or use the [`findmax` function](https://docs.julialang.org/en/v1/base/collections/#Base.findmax) to find the maximum value along with the index at which it occurs. 
+
+
+```julia
+# place relevant code here. feel free to split this into multiple code chunks if you'd like.
+```
+
+# Experiment with different treatment plans
+
+Play with different values of $E_1$ and $E_2$. Can you find combinations that bring the CRUD concentrations into compliance? What is the treatment cost? 
+
+```julia
+# place relevant code here. feel free to split this into multiple code chunks if you'd like.
+```
+
+Based on your plan, where does the maximum value occur, and what is it? Does this plan make sense? 
+
+# Some other questions to consider
+
+How would you trade off cost versus CRUD concentrations? From your current understanding of the system, would you expect the managers of waste source 1 or waste source 2 to treat their waste stream more aggressively?
+
+# Uncertainty analysis
+
+Suppose the initial inflow is uncertain, and its fluctuations are distributed based on a normal distribution with mean 0.15 mg/L and standard deviation 0.05 mg/L. Note that the inflow cannot be less than 0 mg/L.
+
+How frequently will your plan fail to keep concentrations in compliance? Is this acceptable?
+
+```julia
+# place relevant code here. feel free to split this into multiple code chunks if you'd like.
+```
+
+Reflect on the uncertainty analysis you conducted. How many samples did you use? How might you know if this was enough?
