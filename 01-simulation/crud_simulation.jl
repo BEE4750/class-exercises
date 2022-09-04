@@ -1,6 +1,6 @@
 # activate and instantiate the environment
 import Pkg
-Pkg.activate(".")
+Pkg.activate(dirname(@__FILE__))
 Pkg.instantiate()
 
 using Plots # plotting library
