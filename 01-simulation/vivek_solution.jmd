@@ -1,0 +1,243 @@
+---
+title : Wastewater treatment simulations example (Vivek's solution)
+author : BEE 4750/5750
+date : Fall 2022
+weave_options:
+template: ../bee4750html.tpl
+doctype: md2html
+---
+
+```julia
+# activate and instantiate the environment
+import Pkg
+Pkg.activate(dirname(@__FILE__))
+Pkg.instantiate()
+
+using Plots # plotting library
+using Random # tools for random number generation
+using Distributions # probability distribution library
+using StatsPlots # additional statistical plotting functionality
+```
+
+CRUD is released and carried downriver according to this diagram:
+
+![CRUD Simulation Diagram](figures/river_diagram.png)
+
+The statuatory regulation is that CRUD concentrations cannot exceed $1$ mg/L. Environmental authorities have recently found that the concentrations in the river are in excess of this value. We would like to devise a treatment plan to bring the system back into compliance.
+
+Recall that the first-order decay rate of CRUD in the river is $k=0.45 \ \text{d}^{-1}$. For treatment efficiencies $E_i$ at each waste source $i$, the mass of CRUD at every distance $x$ downriver from the initial inflow ($x=0$) is:
+
+$$
+M(x) = \begin{cases} (1100 - 1000 E_1) \exp(-0.45x/25) \ \text{kg/d} & x < 10 \\ 
+                     \left[(1100 - 1000 E_1) \exp(-0.18) +  1200 (1 - E_2)\right]\exp(-0.45(x-10)/25) \ \text{kg/d} & x > 10
+        \end{cases}
+$$
+
+The cost of treating CRUD is quadratic in $E_1$ and $E_2$, namely:
+
+$$
+C(E_1, E_2) = 5000E_1^2 + 3000E_2^2.
+$$
+
+# Plot untreated CRUD concentrations
+
+*Plot the CRUD concentrations from $x = 0 \text{ to } 15$.  I recommend writing a function to calculate these concentrations, as you may want to reuse this later for different values of $E_1$ and $E_2$ (and rerunning functions is typically preferable to copying and pasting sections of code with slightly different values).*
+
+*If you want to compute exponentials, use the [`exp` function](https://docs.julialang.org/en/v1/base/math/#Base.exp-Tuple{Float64}).*
+
+**Response**:
+
+First, we'll write a function to calculate the CRUD concentrations and costs. We could do this with two different functions, but this will make it easier to evaluate over multiple concentrations later, at the expense of making us do a little more work to separate the outputs. Either approach works perfectly well.
+
+One feature of the below function is that I set an optional value for `max_dist`. This is because the length of the river segment I'm considering is the same across all of the simulations. Using optional values means that I don't have to explicitly set this in future calls, which makes it a little easier to use broadcasting to evaluate over different strategies.
+
+In the code below, I also take advantage of our ability to name variables with subscripts in Julia (see [the Julia Basics tutorial on the website](https://viveks.me/environmental-systems-analysis/tutorials/julia-basics/#variables) for more details, including the use of Greek letters). This keeps things a little cleaner and more in sync with the mathematical notation, but is otherwise not essential.
+
+We'll also set a random seed for reproducibility in random number generation.
+
+```julia
+Random.seed(1)
+```
+
+```julia
+# Function to evaluate CRUD concentrations and cost of treatment
+# E₁ and E₂ are treatment efficiencies at waste sources 1 and 2
+# max_dist is the length that we model downriver from waste source 1 (x=0)
+# we set max_dist to be 15 by default so we don't have to keep repeating it (this will come in handy later)
+function crud_treatment(E₁, E₂, max_dist = 15)
+    # initialize concentration storage
+    conc = zeros(max_dist)
+    # we're using a spatial step of 1 km with this loop
+    # you could do something else, but make sure your indices are integers
+    for x = 0:(max_dist - 1)
+        if x < 10
+            mass = (1100 - 1000 * E₁) * exp(-0.45 * x / 25)
+            conc[x + 1] = mass / 600000 # convert mass to concentration
+        else
+            mass = ((1100 - 1000 * E₁) * exp(-0.18) + 1200 * (1 - E₂)) * exp(-0.45 * (x - 10) / 25)
+            conc[x + 1] = mass / 660000 # convert mass to concentration
+        end
+    end
+    conc = conc .* 1e3 # convert kg/m³ to mg/L
+    cost = 5000 * E₁^2 + 3000 * E₂^2 # compute cost of this treatment
+
+    return conc, cost # return both, this will be returned as a tuple
+end
+```
+
+Next, we create our plot. Make sure to add labels, and I've also turned off the legend and grid as they don't add much to this particular plot.
+
+```julia
+# plot untreated CRUD concentration
+# note that we don't have to specify max_dist = 15
+crud_untreated = crud_treatment(0, 0)
+plot(crud_untreated[1], xlabel="Distance Downstream (km)", ylabel = "CRUD Concentration (mg/L)", grid = false, legend = false)
+```
+
+*In the absence of any treatment, what is the maximum concentration? How far downstream does it occur? Does this make sense physically?*
+
+*You can use the [`maximum` function](https://docs.julialang.org/en/v1/base/collections/#Base.maximum) to find the maximum over a data structure, or use the [`findmax` function](https://docs.julialang.org/en/v1/base/collections/#Base.findmax) to find the maximum value along with the index at which it occurs.*
+
+**Response**:
+
+We will use `findmax()` to find the function and the distance downstream.
+
+```julia
+crud_max = findmax(crud_untreated[1])
+```
+
+The maximum concentration is `j round(crud_max[1], digits=2)` mg/L, and it occurs `j crud_max[2] - 1` km downriver. This makes sense, as this is where the second waste stream is located, and there isn't enough distance between the two waste streams for most of the CRUD from waste stream 1 to decay, so the inflow at waste stream 2 is much higher than at waste stream 1.
+
+# Experiment with different treatment plans
+
+*Play with different values of $E_1$ and $E_2$. Can you find combinations that bring the CRUD concentrations into compliance? What is the treatment cost?*
+
+**Response**:
+
+We could manually test different strategies by evaluating our function several times. Instead, I'm going to do something overkill and randomly sample treatment strategies, then filter out the ones that result in compliance with the effluent standard. Plotting those will give us some insight into what types of strategies will work.
+
+Notice that I can directly sample each treatment in one command by sampling directly into an array by specifying a tuple with dimensions instead of a single value in the `rand()` call. This is also allowed because $E_1$ and $E_2$ are independent, not correlated.
+
+```julia
+# evaluating different treatment plans
+# generate some potential plans...this could also be done manually
+# we'll sample 1000 strategies, each of which consists of two values, E₁ and E₂
+n_treatment_samples = 1000
+treatment_samples = rand(Uniform(0, 1), (n_treatment_samples, 2))
+# now broadcast over the treatment samples and evaluate the cost and the maximum
+treatment_output = crud_treatment.(treatment_samples[:, 1], treatment_samples[:, 2])    
+```
+
+In the code above, notice that I could just use the broadcast operator `.` to broadcast over the treatment samples, because I set `max_dist` to be optional. If I hadn't done this, I'd need to write a loop, since I don't have multiple distances to broadcast over.
+
+Now, let's find those treatment strategies which result in compliance with the standard. This would not be necessary if we had done the previous step by trial and error, we'd just have to check the maximum values each time we proposed a new strategy. On the other hand, this allows us to more efficiently get a sense of the cost-concentration tradeoff.
+
+One feature of the below code is the use of a [comprehension](https://viveks.me/environmental-systems-analysis/tutorials/julia-basics/#comprehensions), which may be familiar to you if you've used Python before. A comprehension lets us loop over a data structure and do something to those values without having to pre-allocate memory. In some cases, this can make things more compact and readable, but other times it can make things less readable. Use your judgement about when these are useful, and they're never necessary.
+
+What does the comprehension line do? Each element in `treatment_output` is a tuple: the first part is the time series of concentrations, and the second part is the cost. We want to know the maximum concentrations, so we use `maximum()` on the first part of each element and collect those into a vector. Similarly, we want to collect the costs, and can use a concentration to do that. We could easily have pre-allocated `concentrations` and `costs` vectors and done a single loop through `treatment_output` to populate them; this would actually be faster for larger data structures!
+
+```julia
+# find maximum concentrations
+concentrations = [maximum(o[1]) for o in treatment_output]
+# collect costs
+costs = [o[2] for o in treatment_output]
+
+# plot concentrations vs. costs
+scatter(concentrations, costs, xlabel="Maximum CRUD Concentration (mg/L)", ylabel = "Treatment Cost (\$\$)", legend = false, grid = false)
+vline!([1], color=:red) # plot red line to mark regulatory threshold
+```
+
+This tradeoff between cost and maximum concentration makes complete sense! We can see how decreasing the maximum concentration increases the cost. However, this plot doesn't show us what treatment levels are needed to comply. Let's filter our sampled treatment plans to identify those which resulted in compliance (maximum concentration $\leq 1$ mg/L).
+
+```julia
+# filter treatments which comply
+treatment_comply = treatment_samples[concentrations .<= 1.0, :]
+# plot treatmnet levels for those
+scatter(treatment_comply[:, 1], treatment_comply[:, 2], xlabel="E₁", ylabel="E₂", legend = false, grid = false)
+```
+
+We can see that there is a general "triangular" shape to the region where plans are in compliance. Moreover, if either $E_1$ or $E_2$ is on the lower side of the allowable ranges, the other needs to be much closer to 1. 
+
+So we could choose a number of different strategies within that range. For a balanced one, let's use $E_1 = E_2 = 0.75$, but you might also choose a strategy with a higher $E_2$, since the cost of increasing $E_2$ is lower than increasing $E_1$ (more on this later in the semester...)
+
+*Based on your plan, where does the maximum value occur, and what is it? Does this plan make sense?*
+
+Now, let's evaluate how well this plan works.
+
+```julia
+crud_plan_out = crud_treatment(0.75, 0.75)
+crud_plan_max = findmax(crud_plan_out[1])
+```
+
+The maximum concentration is `j round(crud_plan_max[1], digits=2)` mg/L, and it occurs `j crud_plan_max[2] - 1` km downstream. This is the same as before, which makes sense given the balanced treatment plan. We might have gotten a different result if we had opted to make $E_2$ much higher than $E_1$, so waste stream 2 would not substantially increase the CRUD concentration. For example:
+
+```julia
+crud_plan_2_out = crud_treatment(0.6, 0.95)
+crud_plan_2_max = findmax(crud_plan_2_out[1])
+```
+
+In this case, the maximum outflow is right after waste stream 1, as waste stream 2 is so heavily treated that it doesn't add much more CRUD. The cost of the first, balanced plan is `j round(crud_plan_out[2], digits=0)` dollars, while the cost of the second plan is `j round(crud_plan_2_out[2], digits=0)` dollars.
+
+# Some other questions to consider
+
+*How would you trade off cost versus CRUD concentrations? From your current understanding of the system, would you expect the managers of waste source 1 or waste source 2 to treat their waste stream more aggressively?*
+
+**Response**: 
+
+We've actually addressed this somewhat above. Navigating the tradeoffs between costs and CRUD concentrations would reflect concerns about cost vs. the potential impacts of higher CRUD concentrations, even those within the regulatory level (which we don't actually know anything about, since CRUD is made up). The considerations about waste stream 1 and waste stream 2 would reflect questions of cost (since treatment at waste stream 2 is less expensive) and equity. One could argue that waste stream 1 outputs a lot more wastewater in the river, so they should treat at a higher level, but then again, waste stream 2 is more highly concentrated and is cheaper to treat.
+
+
+# Uncertainty analysis
+
+*Suppose the initial inflow is uncertain, and its fluctuations are distributed based on a normal distribution with mean 0.15 mg/L and standard deviation 0.05 mg/L. Note that the inflow cannot be less than 0 mg/L.*
+
+**Response**:
+
+This problem is actually a little more complex, since our equations above relied on the initial inflow being 0.2 mg/L. I've written a new function below which accounts for that change (review [the notes from lecture 2](https://viveks.me/environmental-systems-analysis/assets/lecture-notes/02-intro-modeling/index.html#1) to make sure you understand how this works!). I've used the optional argument trick to fix the balanced strategy from above.
+
+```julia
+function crud_inflow(inflow, E₁ = 0.75, E₂ = 0.75, max_dist = 15)
+    # initialize concentration storage
+    conc = zeros(max_dist)
+    # we're using a spatial step of 1 km with this loop
+    # you could do something else, but make sure your indices are integers
+    for x = 0:(max_dist - 1)
+        if x < 10
+            mass = (500 * inflow + 1000 * (1 - E₁)) * exp(-0.45 * x / 25)
+            conc[x + 1] = mass / 600000 # convert mass to concentration
+        else
+            mass = ((500 * inflow + 1000 * (1 - E₁)) * exp(-0.18) + 1200 * (1 - E₂)) * exp(-0.45 * (x - 10) / 25)
+            conc[x + 1] = mass / 660000 # convert mass to concentration
+        end
+    end
+    conc = conc .* 1e3 # convert kg/m³ to mg/L
+    cost = 5000 * E₁^2 + 3000 * E₂^2 # compute cost of this treatment
+
+
+    return conc, cost # return both, this will be returned as a tuple
+end
+```
+
+*How frequently will your plan fail to keep concentrations in compliance? Is this acceptable?*
+
+**Response**:
+
+Now, let's sample a lot of random inflows for our Monte Carlo analysis. Since inflow can't be less than 0, we have two options: we could sample directly from [a truncated distribution](https://juliastats.org/Distributions.jl/stable/truncate/), which will ensure no samples are out of the allowable range, or we could draw samples from a normal and manually set negatives to 0. Let's go the truncated route.
+
+```julia
+n_inflow_samples = 1000
+inflow_dist = truncated(Normal(0.15, 0.05), 0, Inf)
+inflows = rand(inflow_dist, n_inflow_samples)
+```
+
+```julia
+crud_outputs = crud_inflow.(inflows)
+crud_max = [maximum(o[1]) for o in crud_outputs]
+sum(crud_max .> 1) / n_inflow_samples
+```
+
+The variance in the inflows is low enough that our strategy never fails, though the CRUD concentrations can get as high as `j round(maximum(crud_max), digits=2)` mg/L. A strategy that was less expensive, but gave us less of a margin of safety with the original inflow, might fail more frequently under uncertainty.
+
+*Reflect on the uncertainty analysis you conducted. How many samples did you use? How might you know if this was enough?*
+
+We used 1000 samples, which might not be enough to really capture the extremes of a normal distribution. We could test if this was enough by increasing the number of samples and re-running the analysis, or we could get a rough estimate using the Monte Carlo error analysis from class (though we don't really know the population variance).
