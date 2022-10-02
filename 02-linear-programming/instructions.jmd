@@ -9,7 +9,7 @@ doctype: md2html
 
 # Background
 
-A farmer has access to a pesticide which can be used on corn, oats, soybeans, tomatoes, and wheat fields and costs $\$30/\text{ha-yr}$ to apply as a fixed cost and $\$20/text{kg-ha-yr}$ as a marginal cost.
+A farmer has access to a pesticide which can be used on corn, oats, soybeans, tomatoes, and wheat fields and costs ``\$ 30/\text{ha-yr}`` to apply as a fixed cost and ``\$20/\text{kg-ha-yr}`` as a marginal cost.
 
 The following crop yields can be obtained by applying pesticides (or not):
 
