@@ -1,0 +1,43 @@
+---
+title : Farm Allocation LP Example
+author : BEE 4750/5750
+date : Fall 2022
+weave_options:
+template: ../bee4750html.tpl
+doctype: md2html
+---
+
+# Background
+
+A farmer has access to a pesticide which can be used on corn, oats, soybeans, tomatoes, and wheat fields and costs $\$30/\text{ha-yr}$ to apply as a fixed cost and $\$20/text{kg-ha-yr}$ as a marginal cost.
+
+The following crop yields can be obtained by applying pesticides (or not):
+
+Pesticide Application (kg/ha) | Corn Yields (kg/ha) | Oat Yields (kg/ha) | Soybean Yields (kg/ha) | Tomato Yields (kg/ha) | Wheat Yields (kg/ha) | 
+:---------------------------: | :--------------------: | :------------------: | :----------------: | :----------: | :-----------: |
+0 | 5900 | 2500 | 3500 | 1500 | 3100
+1 | 6700 | 3500 | 4100 | 1800 | 3800
+2 | 7900 | 4000 | 4500 | 2000 | 4200
+
+Production costs, *excluding pesticide*, and selling prices:
+
+Crop | Annual Production Costs (\$/ha-yr) | Selling Prices (\$/kg)
+:------------: | :-------------: | :------------:
+Soybeans | 350 | 0.36 
+Wheat | 280 | 0.27 
+Corn | 390 | 0.22 
+Oats | 300 | 0.25
+Tomatoes | 400 | 0.52
+
+Environmental authorities have declared that the farmer's *average* application rate on corn, soybeans, oats, tomatoes, and wheat cannot exceed 0.6 kg/ha, 0.8 kg/ha, 0.6 kg/ha, 0.8 kg/ha, and 0.7 kg/ha, respectively.
+
+How should the farmer plant crops and apply pesticides to maximize profits over 200 total ha if demand for each crop is 250,000 kg?
+
+# Questions
+
+1. Formulate a linear programming model for the farmer's decision problem.
+2. Implement this linear program in `JuMP`.
+3. What are the:
+    * optimal planting allocation and pesticide application rates?
+    * maximum profits the farmer can make?
+    * value of an additional hectare of land? 
