@@ -15,9 +15,9 @@ The following crop yields can be obtained by applying pesticides (or not):
 
 Pesticide Application (kg/ha) | Corn Yields (kg/ha) | Oat Yields (kg/ha) | Soybean Yields (kg/ha) | Tomato Yields (kg/ha) | Wheat Yields (kg/ha) | 
 :---------------------------: | :--------------------: | :------------------: | :----------------: | :----------: | :-----------: |
-0 | 5900 | 2500 | 3500 | 1500 | 3100
-1 | 6700 | 3500 | 4100 | 1800 | 3800
-2 | 7900 | 4000 | 4500 | 2000 | 4200
+0 | 5900 | 4000 | 3500 | 2700 | 3100
+1 | 6700 | 4400 | 4100 | 3000 | 3800
+2 | 7900 | 4600 | 4500 | 3200 | 4200
 
 Production costs, *excluding pesticide*, and selling prices:
 
