@@ -5,3 +5,5 @@ This repository houses scripts used for in-class coding exercises in Cornell's B
 Index:
 
 * [01-Simulation](01-simulation/): Example of systems simulation.
+* [02-Linear Programming](02-linear-programming/): Implementing a linear program in `JuMP`.
+* [03-Simulation-Optimization](03-simulation-optimization/): Using optimization methods with black box simulation models.
