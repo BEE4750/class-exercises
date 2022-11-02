@@ -1,0 +1,39 @@
+---
+title : Lake Problem Simulation-Optimization Example
+author : BEE 4750/5750
+date : Fall 2022
+weave_options:
+template: ../bee4750html.tpl
+doctype: md2html
+---
+
+# Background
+
+Due to ongoing economic activity, a town emits phosphorous into a shallow lake (with a concentration of $a_t$), which also receives non-point source runoff (concentration $y_t$) from the surrounding area. The concentration of the lake at time $t+1$ is given by
+```math
+X_{t+1} = X_t + a_t + y_t + \frac{X_t^q}{1+X_t^q} - bX_t,
+```
+where:
+
+| Parameter | Value |
+| :------: | :------ |
+| $a_t$ | point-source phosphorous concentration from the town |
+| $y_t$ | non-point-source phosphorous concentration |
+| $q$ | rate at which phosphorous is recycled from sediment |
+| $b$| rate at which phosphorous leaves the lake |
+
+and $X_0 = 0$, $y_t \sim LogNormal(\log(0.02), 0.2)$, $q=2.5$, and $b=0.4$.
+
+# Questions (we might not get to address all of these)
+
+1. Try to find the best solution you can (maximizing the objective $1/T \sum_{t=1}^T a_t$) which does not allow the lake to eutrophy (exceeding its critical threshold value) with more than 20% probability.
+
+    Some things to experiment with:
+    * How many Monte Carlo samples are you using?
+    * What bounds are you searching over for the releases?
+    * How many function evaluations are you using for the search?
+    * What is the impact of different [`Metaheuristics.jl` algorithms](https://docs.juliahub.com/Metaheuristics/aJ70z/3.2.12/algorithms/)?
+
+2. What are the tradeoffs that you notice between these choices, the performance of any found feasible solutions, and speed? What might you recommend?
+
+3. How well does your solution perform against slightly different of $q$, $b$, and/or the variance and mean of $y$? Is the solution reasonably "robust" (in other words, can it satisfy the constraints if your estimate of those parameters is wrong)? How might you decide this?
